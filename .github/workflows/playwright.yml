@@ -113,6 +113,7 @@ jobs:
           Job status: `${{ job.status }}`.
           See attached report or view the workflow run for details.
         to: ${{ env.REPORT_TO }}
+        cc: srengty@gmail.com
         from: ${{ env.REPORT_FROM }}
         secure: ${{ env.REPORT_SMTP_PORT == '465' }}
         attachments: playwright-report.zip
