@@ -66,6 +66,20 @@ jobs:
           echo "REPORT_SMTP_HOST=$SMTP_HOST" >> $GITHUB_ENV
         elif [ -n "$MAIL_SERVER" ]; then
           echo "REPORT_SMTP_HOST=$MAIL_SERVER" >> $GITHUB_ENV
+        else
+          # infer SMTP host from MAIL_USERNAME domain when host secret is missing
+          if [[ "$MAIL_USERNAME" == *"@gmail.com" ]]; then
+            echo "REPORT_SMTP_HOST=smtp.gmail.com" >> $GITHUB_ENV
+          elif [[ "$MAIL_USERNAME" == *"@outlook.com" ]] || [[ "$MAIL_USERNAME" == *"@hotmail.com" ]] || [[ "$MAIL_USERNAME" == *"@live.com" ]]; then
+            echo "REPORT_SMTP_HOST=smtp.office365.com" >> $GITHUB_ENV
+          elif [[ "$MAIL_USERNAME" == *"@yahoo.com" ]]; then
+            echo "REPORT_SMTP_HOST=smtp.mail.yahoo.com" >> $GITHUB_ENV
+          elif [[ "$MAIL_USERNAME" == *"@mailtrap.io" ]]; then
+            echo "REPORT_SMTP_HOST=smtp.mailtrap.io" >> $GITHUB_ENV
+          else
+            DOMAIN=${MAIL_USERNAME#*@}
+            echo "REPORT_SMTP_HOST=smtp.$DOMAIN" >> $GITHUB_ENV
+          fi
         fi
         # prefer MAIL_PORT, then SMTP_PORT, default to 587
         if [ -n "$MAIL_PORT" ]; then
@@ -91,6 +105,6 @@ jobs:
           See attached report or view the workflow run for details.
         to: ${{ env.REPORT_TO }}
         from: ${{ env.REPORT_FROM }}
-        secure: true
+        secure: ${{ env.REPORT_SMTP_PORT == '465' }}
         # Attach the HTML report folder (zips if needed)
         attachments: playwright-report/**
