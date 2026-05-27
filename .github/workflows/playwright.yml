@@ -35,12 +35,17 @@ jobs:
       with:
         name: playwright-report
         path: playwright-report
-    - name: Prepare email sender and recipient
+    - name: Prepare email sender and SMTP settings
       if: always()
       env:
         MAIL_FROM: ${{ secrets.MAIL_FROM }}
         MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
         MAIL_TO: ${{ secrets.MAIL_TO }}
+        MAIL_HOST: ${{ secrets.MAIL_HOST }}
+        SMTP_HOST: ${{ secrets.SMTP_HOST }}
+        MAIL_SERVER: ${{ secrets.MAIL_SERVER }}
+        MAIL_PORT: ${{ secrets.MAIL_PORT }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT }}
       run: |
         # set REPORT_FROM to MAIL_FROM or fall back to MAIL_USERNAME
         if [ -n "$MAIL_FROM" ]; then
@@ -54,13 +59,29 @@ jobs:
         else
           echo "REPORT_TO=$MAIL_USERNAME" >> $GITHUB_ENV
         fi
+        # prefer MAIL_HOST, then SMTP_HOST, then MAIL_SERVER
+        if [ -n "$MAIL_HOST" ]; then
+          echo "REPORT_SMTP_HOST=$MAIL_HOST" >> $GITHUB_ENV
+        elif [ -n "$SMTP_HOST" ]; then
+          echo "REPORT_SMTP_HOST=$SMTP_HOST" >> $GITHUB_ENV
+        elif [ -n "$MAIL_SERVER" ]; then
+          echo "REPORT_SMTP_HOST=$MAIL_SERVER" >> $GITHUB_ENV
+        fi
+        # prefer MAIL_PORT, then SMTP_PORT, default to 587
+        if [ -n "$MAIL_PORT" ]; then
+          echo "REPORT_SMTP_PORT=$MAIL_PORT" >> $GITHUB_ENV
+        elif [ -n "$SMTP_PORT" ]; then
+          echo "REPORT_SMTP_PORT=$SMTP_PORT" >> $GITHUB_ENV
+        else
+          echo "REPORT_SMTP_PORT=587" >> $GITHUB_ENV
+        fi
 
     - name: Send test report email
       if: always()
       uses: dawidd6/action-send-mail@v3
       with:
-        server_address: ${{ secrets.MAIL_HOST }}
-        server_port: ${{ secrets.MAIL_PORT }}
+        server_address: ${{ env.REPORT_SMTP_HOST }}
+        server_port: ${{ env.REPORT_SMTP_PORT }}
         username: ${{ secrets.MAIL_USERNAME }}
         password: ${{ secrets.MAIL_PASSWORD }}
         subject: "Playwright tests - ${{ github.repository }} - ${{ github.ref }} - ${{ job.status }}"
