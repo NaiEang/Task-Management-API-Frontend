@@ -8,14 +8,17 @@ test.describe('Task Management Frontend - Exam Suite', () => {
     // reset tasks before each test
     tasks = [];
 
-    // Mock login endpoint to always succeed
-    await page.route('**/auth/login', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ access_token: 'fake-token' }),
-      });
+    // Debug: forward page console to test output
+    page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
+
+    // Mock login endpoint to always succeed (match absolute and relative URLs)
+    const fulfillLogin = (route: any) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ access_token: 'fake-token' }),
     });
+    await page.route('**/auth/login', fulfillLogin);
+    await page.route('http://localhost:3000/auth/login', fulfillLogin);
 
     // Mock tasks endpoints with minimal in-memory behavior
     await page.route('**/tasks', async (route, request) => {
@@ -41,6 +44,20 @@ test.describe('Task Management Frontend - Exam Suite', () => {
           contentType: 'application/json',
           body: JSON.stringify(newTask),
         });
+      } else {
+        await route.continue();
+      }
+    });
+    // Also ensure absolute URL for tasks is mocked
+    await page.route('http://localhost:3000/tasks', async (route, request) => {
+      if (request.method() === 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(tasks) });
+      } else if (request.method() === 'POST') {
+        const postData = request.postData() || '{}';
+        const body = JSON.parse(postData);
+        const newTask = { id: String(tasks.length + 1), title: body.title, status: 'open', priority: body.priority || 'normal', assignee: body.assignee || 'Me' };
+        tasks.push(newTask);
+        await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(newTask) });
       } else {
         await route.continue();
       }
