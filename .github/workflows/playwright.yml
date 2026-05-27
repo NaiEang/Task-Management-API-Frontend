@@ -33,12 +33,12 @@ jobs:
       if: always()
       run: |
         python - <<'PY'
-import shutil
-import pathlib
-report_dir = pathlib.Path('playwright-report')
-if report_dir.exists() and report_dir.is_dir():
-    shutil.make_archive('playwright-report', 'zip', report_dir)
-PY
+          import shutil
+          import pathlib
+          report_dir = pathlib.Path('playwright-report')
+          if report_dir.exists() and report_dir.is_dir():
+              shutil.make_archive('playwright-report', 'zip', report_dir)
+        PY
 
     - name: Upload Playwright HTML Report as artifact
       if: always()
