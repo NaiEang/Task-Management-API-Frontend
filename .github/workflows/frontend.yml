@@ -1,0 +1,40 @@
+name: Frontend UI Tests
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright tests
+        run: npx playwright test
+        
+      - name: Send Email Notification
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "Frontend Test Result: ${{ github.repository }}"
+          to: srengty@gmail.com, ${{ github.event.pusher.email }}
+          from: GitHub Actions UI CI
+          body: |
+            Frontend UI Test Report
+            Status: ${{ job.status }}
+            Check UI results: https://github.com/${{ github.repository }}/actionss
