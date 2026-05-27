@@ -32,13 +32,8 @@ jobs:
     - name: Zip Playwright HTML Report
       if: always()
       run: |
-        python - <<'PY'
-          import shutil
-          import pathlib
-          report_dir = pathlib.Path('playwright-report')
-          if report_dir.exists() and report_dir.is_dir():
-              shutil.make_archive('playwright-report', 'zip', report_dir)
-        PY
+        python -c "import shutil, pathlib; report_dir=pathlib.Path('playwright-report');\
+        shutil.make_archive('playwright-report', 'zip', report_dir) if report_dir.exists() and report_dir.is_dir() else None"
 
     - name: Upload Playwright HTML Report as artifact
       if: always()
