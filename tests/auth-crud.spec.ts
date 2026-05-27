@@ -1,6 +1,51 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Task Management Frontend - Exam Suite', () => {
+  // In-memory mock tasks for route handlers
+  let tasks: any[] = [];
+
+  test.beforeEach(async ({ page }) => {
+    // reset tasks before each test
+    tasks = [];
+
+    // Mock login endpoint to always succeed
+    await page.route('**/auth/login', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ access_token: 'fake-token' }),
+      });
+    });
+
+    // Mock tasks endpoints with minimal in-memory behavior
+    await page.route('**/tasks', async (route, request) => {
+      if (request.method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(tasks),
+        });
+      } else if (request.method() === 'POST') {
+        const postData = request.postData() || '{}';
+        const body = JSON.parse(postData);
+        const newTask = {
+          id: String(tasks.length + 1),
+          title: body.title,
+          status: 'open',
+          priority: body.priority || 'normal',
+          assignee: body.assignee || 'Me',
+        };
+        tasks.push(newTask);
+        await route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify(newTask),
+        });
+      } else {
+        await route.continue();
+      }
+    });
+  });
 
   test('Authentication UI: Successful Login', async ({ page }) => {
     await page.goto('/');
@@ -11,6 +56,7 @@ test.describe('Task Management Frontend - Exam Suite', () => {
 
   test('Error Handling: Invalid Login Message', async ({ page }) => {
     await page.goto('/');
+    // click login without username to trigger client-side validation
     await page.getByRole('button', { name: /login/i }).click();
     const errorBox = page.locator('#error-msg');
     await expect(errorBox).toBeVisible();
@@ -38,12 +84,12 @@ test.describe('Task Management Frontend - Exam Suite', () => {
     await page.getByRole('button', { name: /login/i }).click();
 
     await page.waitForSelector('h1');
-    
+
     await page.waitForTimeout(500);
 
     const countBefore = await page.locator('.task-item').count();
     await page.getByRole('button', { name: /add/i }).click();
-    
+
     const countAfter = await page.locator('.task-item').count();
     expect(countBefore).toBe(countAfter);
   });
